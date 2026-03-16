@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>សំឡេង · Voice Collector</title>
+<link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@300;400;600&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0f14;
+    --surface: #161920;
+    --surface2: #1e2229;
+    --border: #2a2f3a;
+    --accent: #e8c547;
+    --accent2: #5b8dee;
+    --text: #eaedf2;
+    --muted: #6b7280;
+    --danger: #e05a5a;
+    --success: #4caf7d;
+    --record: #e05a5a;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', 'Kantumruy Pro', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background-image:
+      radial-gradient(ellipse 60% 40% at 20% 20%, rgba(91,141,238,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 60% at 80% 80%, rgba(232,197,71,0.05) 0%, transparent 60%);
+  }
+
+  header {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    padding: 16px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    background: rgba(13,15,20,0.88);
+    backdrop-filter: blur(12px);
+    z-index: 10;
+  }
+
+  .logo {
+    font-family: 'Kantumruy Pro', sans-serif;
+    font-size: 15px;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .logo span { color: var(--muted); font-family: 'DM Mono', monospace; font-size: 12px; }
+
+  .counter {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .counter strong { color: var(--text); }
+
+  /* ── Speaker badge ── */
+  .speaker-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .speaker-badge span {
+    color: var(--accent2);
+  }
+  .speaker-badge button {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 4px;
+    padding: 2px 7px;
+    font-size: 10px;
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    transition: all 0.2s;
+  }
+  .speaker-badge button:hover { border-color: var(--danger); color: var(--danger); }
+
+  /* ── Main ── */
+  .main {
+    width: 100%;
+    max-width: 640px;
+    margin-top: 80px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* ── Sentence card ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 36px 40px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .card.recording::before { opacity: 1; }
+
+  .card-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+
+  .sentence {
+    font-family: 'Kantumruy Pro', 'DM Sans', sans-serif;
+    font-size: clamp(20px, 4vw, 26px);
+    line-height: 1.75;
+    color: var(--text);
+    font-weight: 400;
+    min-height: 80px;
+  }
+  .sentence .en { color: var(--accent); }
+
+  .sentence-id {
+    margin-top: 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--border);
+  }
+
+  /* skeleton */
+  .skeleton {
+    background: linear-gradient(90deg, var(--border) 25%, var(--surface2) 50%, var(--border) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.2s infinite;
+    border-radius: 6px;
+    height: 28px;
+    margin-bottom: 10px;
+  }
+  .skeleton.short { width: 55%; }
+  @keyframes shimmer { from{background-position:200% 0} to{background-position:-200% 0} }
+
+  /* ── Waveform ── */
+  .waveform-container {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 20px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .waveform {
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+  }
+
+  .wave-bar {
+    width: 3px;
+    border-radius: 2px;
+    background: var(--border);
+    height: 8px;
+  }
+  .wave-bar.active {
+    background: var(--record);
+    animation: wavePulse 0.5s ease-in-out infinite alternate;
+    animation-delay: calc(var(--i) * 0.04s);
+  }
+  @keyframes wavePulse { from{height:8px} to{height:50px} }
+
+  .timer {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--muted);
+    text-align: center;
+  }
+  .timer.recording { color: var(--record); }
+
+  /* ── Playback bar ── */
+  .playback-bar {
+    display: none;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--accent2);
+    border-radius: 10px;
+  }
+  .playback-bar.visible { display: flex; animation: slideIn 0.3s ease; }
+
+  .play-btn {
+    background: var(--accent2);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 18px;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: background 0.2s;
+  }
+  .play-btn:hover { background: #4478d4; }
+  .play-btn.playing { background: var(--muted); }
+
+  .playback-info {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+  .playback-info strong { color: var(--success); display: block; font-size: 12px; }
+
+  /* ── Status ── */
+  .status-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 18px;
+    border-radius: 10px;
+    font-size: 13px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    opacity: 0;
+    transform: translateY(6px);
+    transition: all 0.3s;
+    pointer-events: none;
+  }
+  .status-bar.show { opacity: 1; transform: translateY(0); pointer-events: auto; }
+  .status-bar.success { border-color: var(--success); color: var(--success); }
+  .status-bar.error   { border-color: var(--danger);  color: var(--danger);  }
+  .status-bar.info    { border-color: var(--accent2); color: var(--accent2); }
+
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+  .dot.pulse { animation: dotPulse 1s infinite; }
+  @keyframes dotPulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* ── Controls ── */
+  .controls {
+    display: flex;
+    gap: 12px;
+  }
+
+  .btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 20px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    transition: all 0.2s;
+    flex: 1;
+  }
+  .btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none !important; }
+
+  .btn-record { background: var(--record); color: #fff; }
+  .btn-record:hover:not(:disabled) { background: #c94444; transform: translateY(-1px); }
+
+  .btn-stop { background: var(--surface2); border: 1px solid var(--border); color: var(--text); }
+  .btn-stop:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+
+  .btn-next { background: var(--accent); color: #0d0f14; }
+  .btn-next:hover:not(:disabled) { background: #d4b03e; transform: translateY(-1px); }
+
+  .btn-discard {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 13px;
+    padding: 10px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.2s;
+    width: fit-content;
+    margin: 0 auto;
+  }
+  .btn-discard:hover:not(:disabled) { border-color: var(--danger); color: var(--danger); }
+  .btn-discard:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  /* ── Session log ── */
+  .log-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .log-list {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+  .log-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    animation: slideIn 0.25s ease;
+  }
+  @keyframes slideIn { from{opacity:0;transform:translateY(-5px)} to{opacity:1;transform:none} }
+  .log-num  { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); width: 24px; flex-shrink: 0; }
+  .log-id   { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--accent2); flex-shrink: 0; }
+  .log-time { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); flex-shrink: 0; }
+  .log-dur  { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); flex-shrink: 0; margin-left: auto; }
+  .log-play {
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    border-radius: 6px; padding: 3px 10px; cursor: pointer; font-size: 11px;
+    transition: all 0.2s; flex-shrink: 0;
+  }
+  .log-play:hover { border-color: var(--accent2); color: var(--accent2); }
+
+  .empty-state {
+    text-align: center;
+    padding: 20px;
+    color: var(--muted);
+    font-size: 13px;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+  }
+
+  /* ── Completion ── */
+  .completion {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    padding: 60px 32px;
+    text-align: center;
+    width: 100%;
+    max-width: 480px;
+  }
+  .completion.show { display: flex; }
+
+  .completion-icon { font-size: 52px; animation: popIn 0.5s cubic-bezier(0.34,1.56,0.64,1); }
+  @keyframes popIn { from{transform:scale(0);opacity:0} to{transform:scale(1);opacity:1} }
+
+  .completion-title {
+    font-family: 'Kantumruy Pro', sans-serif;
+    font-size: clamp(22px,5vw,30px);
+    font-weight: 600;
+    line-height: 1.4;
+  }
+  .completion-sub { color: var(--muted); font-size: 14px; max-width: 320px; line-height: 1.7; }
+
+  .stats {
+    display: flex;
+    gap: 28px;
+    padding: 20px 32px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .stat { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .stat-n { font-family: 'DM Mono', monospace; font-size: 28px; color: var(--accent); }
+  .stat-l { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; }
+
+  .btn-new {
+    background: var(--accent); color: #0d0f14; border: none; border-radius: 10px;
+    padding: 14px 32px; font-size: 14px; font-weight: 500; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; transition: background 0.2s, transform 0.2s;
+  }
+  .btn-new:hover { background: #d4b03e; transform: translateY(-1px); }
+
+  @media (max-width: 500px) {
+    .card { padding: 24px 20px; }
+    .controls { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🎙 សំឡេង <span>/ Voice Lab</span></div>
+  <div style="display:flex; align-items:center; gap:16px;">
+    <div class="speaker-badge">
+      👤 <span id="speaker-label"></span>
+      <button onclick="changeSpeaker()">change</button>
+    </div>
+    <div class="counter" id="header-counter">Sentence <strong id="hdr-n">1</strong></div>
+  </div>
+</header>
+
+<!-- Main -->
+<main class="main" id="main">
+
+  <div class="card" id="sentence-card">
+    <div class="card-label">Read this sentence aloud · អានប្រយោគនេះឱ្យឮ</div>
+    <div class="sentence" id="sentence-text">
+      <div class="skeleton"></div>
+      <div class="skeleton short"></div>
+    </div>
+    <div class="sentence-id" id="sentence-id">#—</div>
+  </div>
+
+  <div class="waveform-container">
+    <div class="waveform" id="waveform"></div>
+    <div class="timer" id="timer">00:00</div>
+  </div>
+
+  <div class="playback-bar" id="playback-bar">
+    <button class="play-btn" id="play-btn" onclick="playback()">▶ Listen back</button>
+    <div class="playback-info">
+      <strong id="play-label">Ready</strong>
+      Happy with it? Press Next — or discard below.
+    </div>
+  </div>
+
+  <div class="status-bar" id="status-bar">
+    <div class="dot" id="status-dot"></div>
+    <span id="status-text"></span>
+  </div>
+
+  <div class="controls">
+    <button class="btn btn-record" id="btn-record" onclick="startRecording()">● Record</button>
+    <button class="btn btn-stop"   id="btn-stop"   onclick="stopRecording()" disabled>■ Stop</button>
+    <button class="btn btn-next"   id="btn-next"   onclick="nextSentence()"  disabled>Next →</button>
+  </div>
+
+  <button class="btn-discard" id="btn-discard" onclick="discard()" disabled>
+    ✕ Discard & re-record
+  </button>
+
+  <div>
+    <div class="log-label">Session log · <span id="log-count">0</span> recorded</div>
+    <div class="log-list" id="log-list">
+      <div class="empty-state">No recordings yet — press Record to begin.</div>
+    </div>
+  </div>
+
+</main>
+
+<!-- Completion -->
+<div class="completion" id="completion">
+  <div class="completion-icon">🎉</div>
+  <div class="completion-title">អស្ចារ្យណាស់!<br><span style="color:var(--accent)">All done!</span></div>
+  <div class="completion-sub">No more sentences. Your recordings are saved and ready to submit.</div>
+  <div class="stats">
+    <div class="stat"><div class="stat-n" id="s-count">0</div><div class="stat-l">Recorded</div></div>
+    <div class="stat"><div class="stat-n" id="s-time">0s</div><div class="stat-l">Audio</div></div>
+  </div>
+  <button class="btn-new" onclick="newSession()">Start new session</button>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// Speaker ID
+// ─────────────────────────────────────────────────────────────────────────────
+let SPEAKER_ID = localStorage.getItem('speaker_id');
+if (!SPEAKER_ID) {
+  SPEAKER_ID = prompt('Enter your name or ID to begin:')?.trim() || 'anonymous';
+  localStorage.setItem('speaker_id', SPEAKER_ID);
+}
+document.getElementById('speaker-label').textContent = SPEAKER_ID;
+
+function changeSpeaker() {
+  const name = prompt('Enter new name or ID:')?.trim();
+  if (name) {
+    SPEAKER_ID = name;
+    localStorage.setItem('speaker_id', SPEAKER_ID);
+    document.getElementById('speaker-label').textContent = SPEAKER_ID;
+    location.reload();
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// API
+// ─────────────────────────────────────────────────────────────────────────────
+async function fetchNextSentence() {
+  const res = await fetch(`/api/sentences/next?speaker_id=${encodeURIComponent(SPEAKER_ID)}`);
+  return await res.json();
+}
+
+async function uploadRecording() {
+  const formData = new FormData();
+  formData.append('sentence_id', currentSentence.id);
+  formData.append('speaker_id', SPEAKER_ID);
+  formData.append('duration', audioDuration);
+  formData.append('audio', new Blob(audioChunks, { type: 'audio/webm' }), 'rec.webm');
+  await fetch('/api/recordings/upload', { method: 'POST', body: formData });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// State
+// ─────────────────────────────────────────────────────────────────────────────
+let currentSentence = null;
+let sentenceCount   = 0;
+
+let mediaRecorder   = null;
+let audioChunks     = [];
+let recordingStart  = null;
+let timerInterval   = null;
+let isRecording     = false;
+let hasRecorded     = false;
+let audioUrl        = null;
+let audioDuration   = 0;
+let activeAudio     = null;
+
+let sessionLog      = [];
+let totalAudio      = 0;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Boot
+// ─────────────────────────────────────────────────────────────────────────────
+async function init() {
+  buildWaveform();
+  await loadSentence();
+}
+
+async function loadSentence() {
+  setCardLoading(true);
+  const sentence = await fetchNextSentence();
+  setCardLoading(false);
+
+  if (!sentence) { showCompletion(); return; }
+
+  currentSentence = sentence;
+  sentenceCount++;
+
+  document.getElementById('sentence-text').innerHTML = sentence.text;
+  document.getElementById('sentence-id').textContent  = '#' + sentence.id;
+  document.getElementById('hdr-n').textContent        = sentenceCount;
+
+  hasRecorded   = false;
+  audioUrl      = null;
+  audioDuration = 0;
+  hidePlayback();
+  resetWaveform();
+  setTimer('00:00', false);
+  document.getElementById('sentence-card').classList.remove('recording');
+  showStatus('');
+  updateButtons();
+}
+
+function setCardLoading(on) {
+  if (on) {
+    document.getElementById('sentence-text').innerHTML =
+      '<div class="skeleton"></div><div class="skeleton short"></div>';
+    document.getElementById('sentence-id').textContent = '#—';
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Recording
+// ─────────────────────────────────────────────────────────────────────────────
+async function startRecording() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
+    audioChunks   = [];
+    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+    mediaRecorder.onstop = onRecordingStop;
+    mediaRecorder.start();
+    isRecording    = true;
+    recordingStart = Date.now();
+    startTimer();
+    animateWave(true);
+    document.getElementById('sentence-card').classList.add('recording');
+    showStatus('Recording… speak clearly', 'info', true);
+    updateButtons();
+  } catch(e) {
+    showStatus('Microphone access denied. Please allow microphone access.', 'error');
+  }
+}
+
+function stopRecording() {
+  if (!mediaRecorder || !isRecording) return;
+  mediaRecorder.stop();
+  mediaRecorder.stream.getTracks().forEach(t => t.stop());
+  isRecording = false;
+  stopTimer();
+  animateWave(false);
+  document.getElementById('sentence-card').classList.remove('recording');
+}
+
+function onRecordingStop() {
+  const blob = new Blob(audioChunks, { type: 'audio/webm' });
+  audioUrl      = URL.createObjectURL(blob);
+  audioDuration = Math.round((Date.now() - recordingStart) / 1000);
+  hasRecorded   = true;
+
+  document.getElementById('play-label').textContent = audioDuration + 's recorded ✓';
+  showPlaybackBar();
+  updateButtons();
+  showStatus('✓ Good! Listen back, then hit Next — or discard to redo.', 'success');
+}
+
+function discard() {
+  if (isRecording) stopRecording();
+  hasRecorded   = false;
+  audioUrl      = null;
+  audioDuration = 0;
+  hidePlayback();
+  resetWaveform();
+  setTimer('00:00', false);
+  showStatus('Discarded. Ready to record again.', 'error');
+  updateButtons();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Next
+// ─────────────────────────────────────────────────────────────────────────────
+async function nextSentence() {
+  showStatus('Uploading…', 'info', true);
+  await uploadRecording();
+
+  sessionLog.push({
+    id:        currentSentence.id,
+    url:       audioUrl,
+    duration:  audioDuration,
+    timestamp: new Date().toLocaleTimeString(),
+  });
+  totalAudio += audioDuration;
+  renderLog();
+
+  await loadSentence();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Playback
+// ─────────────────────────────────────────────────────────────────────────────
+function showPlaybackBar() {
+  document.getElementById('playback-bar').classList.add('visible');
+}
+function hidePlayback() {
+  document.getElementById('playback-bar').classList.remove('visible');
+  if (activeAudio) { activeAudio.pause(); activeAudio = null; }
+  resetPlayBtn();
+}
+function resetPlayBtn() {
+  const btn = document.getElementById('play-btn');
+  btn.textContent = '▶ Listen back';
+  btn.classList.remove('playing');
+}
+function playback() {
+  if (!audioUrl) return;
+  const btn = document.getElementById('play-btn');
+  if (activeAudio && !activeAudio.paused) {
+    activeAudio.pause();
+    activeAudio.currentTime = 0;
+    resetPlayBtn();
+    return;
+  }
+  activeAudio = new Audio(audioUrl);
+  activeAudio.onended = resetPlayBtn;
+  activeAudio.play();
+  btn.textContent = '■ Stop';
+  btn.classList.add('playing');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UI helpers
+// ─────────────────────────────────────────────────────────────────────────────
+function updateButtons() {
+  document.getElementById('btn-record').disabled  = isRecording || hasRecorded;
+  document.getElementById('btn-stop').disabled    = !isRecording;
+  document.getElementById('btn-next').disabled    = !hasRecorded;
+  document.getElementById('btn-discard').disabled = !(hasRecorded || isRecording);
+}
+
+function showStatus(msg, type='', pulse=false) {
+  const bar = document.getElementById('status-bar');
+  if (!msg) { bar.classList.remove('show'); return; }
+  document.getElementById('status-text').textContent = msg;
+  bar.className = 'status-bar show' + (type ? ' '+type : '');
+  document.getElementById('status-dot').className = 'dot' + (pulse ? ' pulse' : '');
+}
+
+function buildWaveform() {
+  const wf = document.getElementById('waveform');
+  for (let i = 0; i < 40; i++) {
+    const b = document.createElement('div');
+    b.className = 'wave-bar';
+    b.style.setProperty('--i', i);
+    wf.appendChild(b);
+  }
+}
+function animateWave(on) {
+  document.querySelectorAll('.wave-bar').forEach(b => b.classList.toggle('active', on));
+}
+function resetWaveform() { animateWave(false); }
+
+function startTimer() {
+  setTimer('00:00', true);
+  timerInterval = setInterval(() => {
+    const e = Math.floor((Date.now() - recordingStart) / 1000);
+    setTimer(fmt(e), true);
+  }, 500);
+}
+function stopTimer() {
+  clearInterval(timerInterval);
+  document.getElementById('timer').className = 'timer';
+}
+function setTimer(val, recording) {
+  const el = document.getElementById('timer');
+  el.textContent = val;
+  el.className = 'timer' + (recording ? ' recording' : '');
+}
+function fmt(s) {
+  return String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0');
+}
+
+function renderLog() {
+  const list = document.getElementById('log-list');
+  document.getElementById('log-count').textContent = sessionLog.length;
+  list.innerHTML = sessionLog.map((r,i) => `
+    <div class="log-item">
+      <span class="log-num">${String(i+1).padStart(2,'0')}</span>
+      <span class="log-id">${r.id}</span>
+      <span class="log-time">${r.timestamp}</span>
+      <span class="log-dur">${r.duration}s</span>
+      <button class="log-play" onclick="new Audio('${r.url}').play()">▶</button>
+    </div>
+  `).join('');
+}
+
+function showCompletion() {
+  document.getElementById('main').style.display = 'none';
+  document.getElementById('header-counter').style.display = 'none';
+  document.getElementById('s-count').textContent = sessionLog.length;
+  document.getElementById('s-time').textContent  = totalAudio + 's';
+  document.getElementById('completion').classList.add('show');
+}
+
+function newSession() {
+  sessionLog    = [];
+  totalAudio    = 0;
+  sentenceCount = 0;
+  document.getElementById('completion').classList.remove('show');
+  document.getElementById('main').style.display = '';
+  document.getElementById('header-counter').style.display = '';
+  renderLog();
+  loadSentence();
+}
+
+init();
+</script>
+</body>
+</html>
