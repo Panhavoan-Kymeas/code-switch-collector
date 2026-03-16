@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+sqlalchemy
+aiosqlite
+asyncpg
+python-multipart
+aiofiles
+python-dotenv
+boto3
