@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from routers import sentences, recordings
 from database import engine, Base
+from models import Sentence, Recording  # <- important!
 
 app = FastAPI()
 
@@ -16,5 +17,9 @@ app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
 @app.on_event("startup")
 async def on_startup():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        print("Tables created successfully.")
+    except Exception as e:
+        print("Failed to create tables:", e)
