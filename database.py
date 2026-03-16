@@ -12,3 +12,8 @@ engine = create_async_engine(DATABASE_URL)
 AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 Base = declarative_base()  # single Base shared everywhere
+
+# This must exist for routers to import
+async def get_db():
+    async with AsyncSessionLocal() as session:
+        yield session
