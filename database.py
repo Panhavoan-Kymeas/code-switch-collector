@@ -9,6 +9,10 @@ load_dotenv()
 # Read DATABASE_URL from environment, fallback to default SQLite if not set
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./voice_collector.db")
 
+# Fix Railway's postgres URL to use asyncpg
+if DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+
 # Create engine and sessionmaker
 engine = create_async_engine(DATABASE_URL)
 AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
