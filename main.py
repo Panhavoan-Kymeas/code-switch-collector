@@ -18,7 +18,7 @@ app.mount("/", StaticFiles(directory="static", html=True), name="static")
 @app.on_event("startup")
 async def on_startup():
     try:
-        async with engine.begin() as conn:
+        async with engine.connect() as conn:  # use connect instead of begin
             await conn.run_sync(Base.metadata.create_all)
         print("Tables created successfully.")
     except Exception as e:
