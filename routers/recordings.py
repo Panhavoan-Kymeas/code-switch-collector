@@ -38,16 +38,21 @@ async def upload_recording(
 ):
     filename = f"{speaker_id}_{sentence_id}_{uuid.uuid4().hex[:6]}.webm"
 
-    # Upload file directly to R2
-    s3.upload_fileobj(audio.file, R2_BUCKET, filename)
+    try:
+        await asyncio.to_thread(s3.upload_fileobj, audio.file, R2_BUCKET, filename)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"R2 upload failed: {e}")
 
-    # Save metadata in DB
-    db.add(Recording(
-        sentence_id=sentence_id,
-        speaker_id=speaker_id,
-        filename=filename,
-        duration_sec=duration
-    ))
-    await db.commit()
+    try:
+        db.add(Recording(
+            sentence_id=sentence_id,
+            speaker_id=speaker_id,
+            filename=filename,
+            duration_sec=duration
+        ))
+        await db.commit()
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"DB commit failed: {e}")
 
     return {"status": "saved", "filename": filename}
