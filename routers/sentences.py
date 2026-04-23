@@ -42,7 +42,8 @@ async def get_next_sentence(speaker_id: str, db: AsyncSession = Depends(get_db))
     weights = []
 
     for sentence, recording_count in rows:
-        quality_weight = 1.0 if sentence.id <= midpoint else 0.35
+        num = int(sentence.id[1:])  # "S001" -> 1
+        quality_weight = 1.0 if num <= midpoint else 0.35
         balance_weight = 1.0 / math.sqrt(recording_count + 1)
         final_weight = quality_weight * balance_weight
 
