@@ -1,10 +1,11 @@
-from fastapi import APIRouter, UploadFile, File, Form, Depends
+from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
 from models import Recording
 import uuid
 import boto3
 import os
+import asyncio
 from dotenv import load_dotenv
 
 load_dotenv()
