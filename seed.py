@@ -15,7 +15,7 @@ async def seed():
         await conn.run_sync(Base.metadata.create_all)
 
     async with AsyncSessionLocal() as db:
-        csv_path = os.path.join(os.path.dirname(__file__), "data/sentences.csv")
+        csv_path = os.path.join(os.path.dirname(__file__), "data/test_sentences.csv")
         with open(csv_path, encoding="utf-8") as f:
             reader = csv.DictReader(f)
             for row in reader:
