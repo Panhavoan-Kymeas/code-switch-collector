@@ -15,4 +15,5 @@ class Recording(Base):
     speaker_id = Column(String)
     filename = Column(String)
     duration_sec = Column(Integer)
+    split = Column(String, default="train")
     created_at = Column(DateTime, default=datetime.utcnow)

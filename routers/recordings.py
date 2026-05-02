@@ -48,6 +48,7 @@ async def upload_recording(
     speaker_id: str  = Form(...),
     duration: int    = Form(...),
     mime_type: str   = Form(default="audio/webm"),
+    split: str       = Form(default="train"),        # ← NEW
     audio: UploadFile = File(...),
     db: AsyncSession = Depends(get_db)
 ):
@@ -70,7 +71,8 @@ async def upload_recording(
             sentence_id=sentence_id,
             speaker_id=speaker_id,
             filename=filename,
-            duration_sec=duration
+            duration_sec=duration,
+            split=split                              # ← NEW
         ))
         await db.commit()
     except Exception as e:
