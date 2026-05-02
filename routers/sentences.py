@@ -53,3 +53,33 @@ async def get_next_sentence(speaker_id: str, db: AsyncSession = Depends(get_db))
     chosen = random.choices(sentences, weights=weights, k=1)[0]
 
     return {"id": chosen.id, "text": chosen.text}
+
+
+@router.get("/next/test")
+async def get_next_test_sentence(speaker_id: str, db: AsyncSession = Depends(get_db)):
+    already_recorded = (
+        select(Recording.sentence_id)
+        .where(Recording.speaker_id == speaker_id)
+    )
+
+    stmt = (
+        select(Sentence, func.count(Recording.id).label("recording_count"))
+        .outerjoin(Recording, Recording.sentence_id == Sentence.id)
+        .where(Sentence.id.not_in(already_recorded))
+        .where(Sentence.id.like("T%"))               # test sentences only
+        .group_by(Sentence.id, Sentence.text)
+        .order_by(func.count(Recording.id).asc(), func.random())
+        .limit(40)
+    )
+
+    result = await db.execute(stmt)
+    rows = result.all()
+
+    if not rows:
+        return None
+
+    sentences = [s for s, _ in rows]
+    weights = [1.0 / math.sqrt(rc + 1) for _, rc in rows]
+    chosen = random.choices(sentences, weights=weights, k=1)[0]
+
+    return {"id": chosen.id, "text": chosen.text}

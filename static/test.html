@@ -517,7 +517,7 @@ function changeSpeaker() {
 // API
 // ─────────────────────────────────────────────────────────────────────────────
 async function fetchNextSentence() {
-  const res = await fetch(`/api/sentences/next?speaker_id=${encodeURIComponent(SPEAKER_ID)}`);
+  const res = await fetch(`/api/sentences/next/test?speaker_id=${encodeURIComponent(SPEAKER_ID)}`);
   return await res.json();
 }
 
